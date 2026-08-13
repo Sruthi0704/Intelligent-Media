@@ -10,14 +10,15 @@ from PIL import Image
 # Configure Tesseract for Windows and Render/Linux
 # --------------------------------------------------
 if os.name == "nt":
-    # Windows
-    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    pytesseract.pytesseract.tesseract_cmd = (
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    )
 else:
-    # Linux / Render
     pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
-# Indian number plate format (e.g., KA01AB1234)
+# Indian vehicle number plate pattern
 INDIAN_PLATE_REGEX = r"[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{3,4}"
+
 
 # --------------------------------------------------
 # Blur Detection
@@ -45,7 +46,41 @@ def compute_hash(filepath):
 
 
 # --------------------------------------------------
-# OCR Text Extraction (Improved)
+# Locate License Plate Region
+# --------------------------------------------------
+def detect_plate_region(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Reduce noise
+    blur = cv2.bilateralFilter(gray, 11, 17, 17)
+
+    # Detect edges
+    edged = cv2.Canny(blur, 30, 200)
+
+    # Find contours
+    contours, _ = cv2.findContours(
+        edged, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
+
+    for contour in contours:
+        peri = cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, 0.018 * peri, True)
+
+        if len(approx) == 4:
+            x, y, w, h = cv2.boundingRect(approx)
+            aspect_ratio = w / float(h)
+
+            # Typical Indian plate aspect ratio
+            if 2.0 < aspect_ratio < 6.5 and w > 80 and h > 20:
+                return image[y:y+h, x:x+w]
+
+    return None
+
+
+# --------------------------------------------------
+# OCR Text Extraction
 # --------------------------------------------------
 def extract_text(filepath):
     try:
@@ -54,65 +89,55 @@ def extract_text(filepath):
         if image is None:
             return ""
 
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Try to detect plate region
+        plate = detect_plate_region(image)
+
+        if plate is None:
+            plate = image
+
+        gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
 
         # Improve contrast
         gray = cv2.equalizeHist(gray)
 
-        # Detect edges
-        edged = cv2.Canny(gray, 100, 200)
-
-        # Find contours
-        contours, _ = cv2.findContours(
-            edged, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-        )
-
-        contours = sorted(contours, key=cv2.contourArea, reverse=True)[:15]
-
-        plate_region = None
-
-        # Look for a rectangular region that resembles a license plate
-        for contour in contours:
-            peri = cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
-
-            if len(approx) == 4:
-                x, y, w, h = cv2.boundingRect(approx)
-                aspect_ratio = w / float(h)
-
-                if 2.0 < aspect_ratio < 6.5 and w > 80 and h > 20:
-                    plate_region = gray[y:y+h, x:x+w]
-                    break
-
-        # If no plate detected, use entire image
-        if plate_region is None:
-            plate_region = gray
-
-        # Enlarge the region
-        plate_region = cv2.resize(
-            plate_region,
+        # Resize for better OCR
+        gray = cv2.resize(
+            gray,
             None,
             fx=3,
             fy=3,
             interpolation=cv2.INTER_CUBIC
         )
 
-        # Threshold for better OCR
-        plate_region = cv2.threshold(
-            plate_region,
+        # Sharpen image
+        kernel = np.array([
+            [-1, -1, -1],
+            [-1,  9, -1],
+            [-1, -1, -1]
+        ])
+        gray = cv2.filter2D(gray, -1, kernel)
+
+        # Threshold
+        thresh = cv2.threshold(
+            gray,
             0,
             255,
             cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )[1]
 
+        # OCR configuration
         config = (
             "--oem 3 --psm 7 "
             "-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         )
 
-        text = pytesseract.image_to_string(plate_region, config=config)
+        text = pytesseract.image_to_string(thresh, config=config)
 
-        return text.strip()
+        # Clean OCR output
+        text = text.upper()
+        text = re.sub(r"[^A-Z0-9]", "", text)
+
+        return text
 
     except Exception as e:
         print("OCR Error:", e)
@@ -120,11 +145,15 @@ def extract_text(filepath):
 
 
 # --------------------------------------------------
-# Indian Number Plate Validation
+# Number Plate Validation
 # --------------------------------------------------
 def validate_indian_number_plate(text):
+    if not text:
+        return None
+
     cleaned = text.upper().replace(" ", "").replace("\n", "")
     match = re.search(INDIAN_PLATE_REGEX, cleaned)
+
     return match.group(0) if match else None
 
 
@@ -132,15 +161,18 @@ def validate_indian_number_plate(text):
 # Screenshot Detection
 # --------------------------------------------------
 def detect_screenshot(image):
-    height, width = image.shape[:2]
-    aspect_ratio = width / height
+    h, w = image.shape[:2]
 
-    # Common mobile screenshot aspect ratios
-    common_ratios = [9 / 16, 10 / 16, 9 / 19.5, 9 / 20]
+    ratio = w / h
 
-    score = min(abs(aspect_ratio - r) for r in common_ratios)
+    phone_like = 0.45 < ratio < 0.65
 
-    return score < 0.05
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 100, 200)
+
+    edge_density = edges.mean()
+
+    return phone_like and edge_density < 15
 
 
 # --------------------------------------------------
@@ -154,9 +186,11 @@ def analyze_image(filepath):
 
     blur_score, blurry = detect_blur(image)
     brightness, low_light = analyze_brightness(image)
+
     img_hash = compute_hash(filepath)
 
     text = extract_text(filepath)
+
     plate = validate_indian_number_plate(text)
 
     screenshot = detect_screenshot(image)
@@ -167,7 +201,7 @@ def analyze_image(filepath):
         "brightness": round(float(brightness), 2),
         "low_light": low_light,
         "image_hash": img_hash,
-        "ocr_text": text,
+        "ocr_text": text if text else "",
         "number_plate_valid": plate is not None,
         "screenshot_suspected": screenshot,
     }
