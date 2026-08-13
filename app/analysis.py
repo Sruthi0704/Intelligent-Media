@@ -10,14 +10,12 @@ from PIL import Image
 # Configure Tesseract for Windows and Render/Linux
 # --------------------------------------------------
 if os.name == "nt":
-    pytesseract.pytesseract.tesseract_cmd = (
-        r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-    )
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 else:
     pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
-# Indian vehicle number plate pattern
-INDIAN_PLATE_REGEX = r"[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{3,4}"
+# Indian number plate pattern
+INDIAN_PLATE_REGEX = r"[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{4}"
 
 
 # --------------------------------------------------
@@ -39,44 +37,10 @@ def analyze_brightness(image):
 
 
 # --------------------------------------------------
-# Image Hash (Duplicate Detection)
+# Image Hash
 # --------------------------------------------------
 def compute_hash(filepath):
     return str(imagehash.phash(Image.open(filepath)))
-
-
-# --------------------------------------------------
-# Locate License Plate Region
-# --------------------------------------------------
-def detect_plate_region(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Reduce noise
-    blur = cv2.bilateralFilter(gray, 11, 17, 17)
-
-    # Detect edges
-    edged = cv2.Canny(blur, 30, 200)
-
-    # Find contours
-    contours, _ = cv2.findContours(
-        edged, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-    )
-
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
-
-    for contour in contours:
-        peri = cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, 0.018 * peri, True)
-
-        if len(approx) == 4:
-            x, y, w, h = cv2.boundingRect(approx)
-            aspect_ratio = w / float(h)
-
-            # Typical Indian plate aspect ratio
-            if 2.0 < aspect_ratio < 6.5 and w > 80 and h > 20:
-                return image[y:y+h, x:x+w]
-
-    return None
 
 
 # --------------------------------------------------
@@ -89,23 +53,18 @@ def extract_text(filepath):
         if image is None:
             return ""
 
-        # Try to detect plate region
-        plate = detect_plate_region(image)
-
-        if plate is None:
-            plate = image
-
-        gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
+        # Convert to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Improve contrast
         gray = cv2.equalizeHist(gray)
 
-        # Resize for better OCR
+        # Enlarge image for better OCR
         gray = cv2.resize(
             gray,
             None,
-            fx=3,
-            fy=3,
+            fx=2.5,
+            fy=2.5,
             interpolation=cv2.INTER_CUBIC
         )
 
@@ -127,7 +86,7 @@ def extract_text(filepath):
 
         # OCR configuration
         config = (
-            "--oem 3 --psm 7 "
+            "--oem 3 --psm 6 "
             "-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         )
 
@@ -186,11 +145,9 @@ def analyze_image(filepath):
 
     blur_score, blurry = detect_blur(image)
     brightness, low_light = analyze_brightness(image)
-
     img_hash = compute_hash(filepath)
 
     text = extract_text(filepath)
-
     plate = validate_indian_number_plate(text)
 
     screenshot = detect_screenshot(image)
