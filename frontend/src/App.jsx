@@ -2,7 +2,8 @@ import { useState } from "react";
 import axios from "axios";
 import "./App.css";
 
-const API = "http://127.0.0.1:8000";
+// Render backend URL
+const API = "https://intelligent-media-xz1r.onrender.com";
 
 export default function App() {
   const [file, setFile] = useState(null);
@@ -12,7 +13,10 @@ export default function App() {
   const [loading, setLoading] = useState(false);
 
   const uploadImage = async () => {
-    if (!file) return alert("Please choose an image");
+    if (!file) {
+      alert("Please choose an image");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("file", file);
@@ -20,7 +24,9 @@ export default function App() {
     try {
       setLoading(true);
       setAnalysis(null);
+      setStatus("Uploading...");
 
+      // Upload image
       const uploadRes = await axios.post(`${API}/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -31,6 +37,7 @@ export default function App() {
 
       let currentStatus = "pending";
 
+      // Poll until processing completes
       while (currentStatus === "pending" || currentStatus === "processing") {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -42,10 +49,12 @@ export default function App() {
       if (currentStatus === "completed") {
         const resultRes = await axios.get(`${API}/result/${id}`);
         setAnalysis(resultRes.data.analysis);
+      } else if (currentStatus === "failed") {
+        alert("Image processing failed.");
       }
     } catch (err) {
       console.error(err);
-      alert("Upload failed");
+      alert("Upload failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -54,6 +63,8 @@ export default function App() {
   return (
     <div className="app">
       <div className="container">
+
+        {/* Hero Section */}
         <div className="hero">
           <h1>Intelligent Media</h1>
           <p>
@@ -62,6 +73,7 @@ export default function App() {
           </p>
         </div>
 
+        {/* Upload Card */}
         <div className="glass-card upload-card">
           <div className="upload-row">
             <input
@@ -76,6 +88,7 @@ export default function App() {
           </div>
         </div>
 
+        {/* Status Card */}
         {processingId && (
           <div className="glass-card status-card">
             <div className="status-row">
@@ -94,11 +107,13 @@ export default function App() {
           </div>
         )}
 
+        {/* Results Card */}
         {analysis && (
           <div className="glass-card results-card">
             <h2>Analysis Results</h2>
 
             <div className="grid">
+
               <div className="metric">
                 <span>Blur Score</span>
                 <strong>{analysis.blur_score?.toFixed(2)}</strong>
@@ -137,6 +152,7 @@ export default function App() {
                   {analysis.number_plate_valid ? "Yes" : "No"}
                 </strong>
               </div>
+
             </div>
 
             <div className="ocr-box">
@@ -145,6 +161,7 @@ export default function App() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
