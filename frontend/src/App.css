@@ -1,0 +1,213 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background: radial-gradient(circle at top left, #1a1f6b, #0b1025 45%, #04060f);
+  color: #ffffff;
+  overflow-y: auto;
+}
+
+.app {
+  min-height: 100vh;
+  padding: 50px 20px 80px;
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 1100px;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  background: linear-gradient(90deg, #8b7dff, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero p {
+  margin-top: 14px;
+  color: #cbd5ff;
+  font-size: 1.2rem;
+}
+
+.glass-card {
+  background: rgba(20, 24, 50, 0.75);
+  border: 1px solid rgba(120, 140, 255, 0.18);
+  backdrop-filter: blur(16px);
+  border-radius: 24px;
+  padding: 28px;
+  margin-bottom: 28px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.upload-row {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+input[type="file"] {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 16px;
+  border-radius: 14px;
+}
+
+button {
+  background: linear-gradient(135deg, #7c6cff, #22d3ee);
+  color: white;
+  border: none;
+  padding: 14px 26px;
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.25);
+}
+
+button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 32px rgba(34, 211, 238, 0.4);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.status-card h3 {
+  margin: 0 0 8px;
+  color: #d6dcff;
+}
+
+.id-text {
+  color: #22d3ee;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.badge {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.badge.completed {
+  background: #22c55e;
+  color: white;
+}
+
+.badge.processing,
+.badge.pending {
+  background: #f59e0b;
+  color: white;
+}
+
+.badge.failed {
+  background: #ef4444;
+  color: white;
+}
+
+.results-card h2 {
+  text-align: center;
+  margin: 0 0 24px;
+  font-size: 2rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.metric {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(120, 140, 255, 0.14);
+  border-radius: 18px;
+  padding: 22px;
+  text-align: center;
+}
+
+.metric span {
+  display: block;
+  color: #cfd5ff;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+}
+
+.metric strong {
+  font-size: 1.8rem;
+  color: #22d3ee;
+}
+
+.ocr-box {
+  margin-top: 28px;
+}
+
+.ocr-box h3 {
+  margin-bottom: 12px;
+}
+
+.ocr-box pre {
+  background: rgba(5, 10, 25, 0.85);
+  border: 1px solid rgba(120, 140, 255, 0.12);
+  padding: 18px;
+  border-radius: 16px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #e5e7ff;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 2.7rem;
+  }
+
+  .hero p {
+    font-size: 1rem;
+  }
+
+  .status-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .upload-row {
+    flex-direction: column;
+  }
+
+  button {
+    width: 100%;
+  }
+}
