@@ -17,8 +17,7 @@ else:
     pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 # Indian number plate format (e.g., KA01AB1234)
-INDIAN_PLATE_REGEX = r"\b[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}\b"
-
+INDIAN_PLATE_REGEX = r"[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{3,4}"
 
 # --------------------------------------------------
 # Blur Detection
@@ -55,36 +54,63 @@ def extract_text(filepath):
         if image is None:
             return ""
 
-        # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Improve contrast
         gray = cv2.equalizeHist(gray)
 
-        # Resize image (2x) for better OCR accuracy
-        gray = cv2.resize(
-            gray,
+        # Detect edges
+        edged = cv2.Canny(gray, 100, 200)
+
+        # Find contours
+        contours, _ = cv2.findContours(
+            edged, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+        )
+
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)[:15]
+
+        plate_region = None
+
+        # Look for a rectangular region that resembles a license plate
+        for contour in contours:
+            peri = cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+
+            if len(approx) == 4:
+                x, y, w, h = cv2.boundingRect(approx)
+                aspect_ratio = w / float(h)
+
+                if 2.0 < aspect_ratio < 6.5 and w > 80 and h > 20:
+                    plate_region = gray[y:y+h, x:x+w]
+                    break
+
+        # If no plate detected, use entire image
+        if plate_region is None:
+            plate_region = gray
+
+        # Enlarge the region
+        plate_region = cv2.resize(
+            plate_region,
             None,
-            fx=2,
-            fy=2,
+            fx=3,
+            fy=3,
             interpolation=cv2.INTER_CUBIC
         )
 
-        # Reduce noise
-        gray = cv2.GaussianBlur(gray, (3, 3), 0)
-
-        # Thresholding
-        thresh = cv2.threshold(
-            gray,
+        # Threshold for better OCR
+        plate_region = cv2.threshold(
+            plate_region,
             0,
             255,
             cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )[1]
 
-        # OCR configuration optimized for license plates
-        config = "--oem 3 --psm 7"
+        config = (
+            "--oem 3 --psm 7 "
+            "-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        )
 
-        text = pytesseract.image_to_string(thresh, config=config)
+        text = pytesseract.image_to_string(plate_region, config=config)
 
         return text.strip()
 
