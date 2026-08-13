@@ -1,24 +1,105 @@
+# =========================
+# Python
+# =========================
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+downloads/
+.eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environment
+.env
+.env.*
+.python-version
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Type checkers
+.mypy_cache/
+.pyre/
+.pytype/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# =========================
+# FastAPI / Backend
+# =========================
+app/uploads/
+uploads/
+
+# SQLite (if ever used)
+*.db
+*.sqlite3
+
 # Logs
-logs
+logs/
 *.log
+
+# =========================
+# React / Vite Frontend
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+
+# If frontend is ever at root
+node_modules/
+dist/
+dist-ssr/
+.vite/
+
+# Package manager logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
+# =========================
+# IDEs and Editors
+# =========================
+.vscode/
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# =========================
+# Misc
+# =========================
+*.local
+*.tmp
+*.temp
