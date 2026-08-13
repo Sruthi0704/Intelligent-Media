@@ -1,3 +1,4 @@
+import os
 import re
 import cv2
 import numpy as np
@@ -5,8 +6,15 @@ import pytesseract
 import imagehash
 from PIL import Image
 
-# Windows Tesseract path
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# --------------------------------------------------
+# Configure Tesseract for Windows and Render/Linux
+# --------------------------------------------------
+if os.name == "nt":
+    # Windows
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+else:
+    # Linux / Render
+    pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 INDIAN_PLATE_REGEX = r"\b[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}\b"
 
@@ -28,8 +36,11 @@ def compute_hash(filepath):
 
 
 def extract_text(filepath):
-    text = pytesseract.image_to_string(Image.open(filepath))
-    return text.strip()
+    try:
+        text = pytesseract.image_to_string(Image.open(filepath))
+        return text.strip()
+    except Exception:
+        return ""
 
 
 def validate_indian_number_plate(text):
@@ -48,6 +59,9 @@ def detect_screenshot(image):
 
 def analyze_image(filepath):
     image = cv2.imread(filepath)
+
+    if image is None:
+        raise ValueError("Could not read image")
 
     blur_score, blurry = detect_blur(image)
     brightness, low_light = analyze_brightness(image)
